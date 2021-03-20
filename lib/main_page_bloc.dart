@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:paperbuilder/utils.dart';
 import 'package:pdf/pdf.dart';
@@ -10,10 +9,14 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
 class MainPageBloc {
-  Uint8List pdfContent;
-  PickedFile imageFile;
   final picker = ImagePicker();
+  PickedFile pickedFileImage;
+  Uint8List pickedFileImageBytes;
+
   var doc = pw.Document();
+  Uint8List pdfContent;
+
+  Uint8List resizedImageBytes;
 
   bool canSetWidth = false;
   bool canSetHeight = false;
@@ -33,7 +36,9 @@ class MainPageBloc {
 
     doc = pw.Document();
     pdfContent = null;
-    imageFile = null;
+    pickedFileImage = null;
+    pickedFileImageBytes = null;
+    resizedImageBytes = null;
   }
 
   Future<void> pickImage() async {
@@ -41,14 +46,31 @@ class MainPageBloc {
       final pickedFile = await picker.getImage(
         source: ImageSource.gallery,
       );
-      imageFile = pickedFile;
+      reset();
+      pickedFileImage = pickedFile;
       canSetWidth = true;
+      pickedFileImageBytes = await pickedFile.readAsBytes();
     } catch (e) {
       print(e);
     }
   }
 
+  resize() async {
+    var heightCM = double.tryParse(heightTEC.text);
+    var widthCM = double.tryParse(widthTEC.text);
+
+    resizedImageBytes = resizeImage(
+      pickedFileImageBytes,
+      width: cm2pixels(widthCM),
+      height: cm2pixels(heightCM),
+    );
+  }
+
   renderPDF() async {
+    resize();
+
+    if (resizedImageBytes == null) return;
+
     var heightCM = double.tryParse(heightTEC.text);
     var widthCM = double.tryParse(widthTEC.text);
 
@@ -57,7 +79,6 @@ class MainPageBloc {
     final totalImages =
         getTotalImagesPerPageCount(width: widthCM, height: heightCM);
 
-    final image = await imageFile.readAsBytes();
     doc = pw.Document();
 
     doc.addPage(
@@ -73,7 +94,7 @@ class MainPageBloc {
                   ...List.generate(
                     totalImages,
                     (index) => pw.Image(
-                      pw.MemoryImage(image),
+                      pw.MemoryImage(resizedImageBytes),
                       width: cm2pixels(widthCM),
                       height: cm2pixels(heightCM),
                     ),

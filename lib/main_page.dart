@@ -30,7 +30,7 @@ class _MainPageState extends State<MainPage> {
         elevation: 0,
         actions: [
           Visibility(
-            visible: bloc.imageFile != null,
+            visible: bloc.pickedFileImage != null,
             child: IconButton(
               icon: Icon(Icons.delete),
               onPressed: () {
@@ -56,7 +56,7 @@ class _MainPageState extends State<MainPage> {
                       bloc.pickImage().then((_) => setState(() {}));
                     },
                   ),
-                  bloc.imageFile?.path != null
+                  bloc.pickedFileImage?.path != null
                       ? Padding(
                           padding: const EdgeInsets.only(top: 10),
                           child: Container(
@@ -73,15 +73,16 @@ class _MainPageState extends State<MainPage> {
                               mainAxisAlignment: MainAxisAlignment.start,
                               children: [
                                 kIsWeb
-                                    ? Image.network(bloc.imageFile.path,
+                                    ? Image.network(bloc.pickedFileImage.path,
                                         width: 80)
-                                    : Image.file(File(bloc.imageFile.path),
+                                    : Image.file(
+                                        File(bloc.pickedFileImage.path),
                                         width: 80),
                                 SizedBox(width: 20),
                                 Column(
                                   children: [
                                     Text(
-                                      bloc.imageFile.path.split("/").last,
+                                      bloc.pickedFileImage.path.split("/").last,
                                       style: TextStyle(
                                           fontWeight: FontWeight.w600),
                                     ),
