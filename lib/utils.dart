@@ -40,5 +40,5 @@ Uint8List resizeImage(Uint8List imageBytes, {double width, double height}) {
     height: height?.toInt(),
   );
 
-  return encodeJpg(newimage);
+  return encodePng(newimage);
 }
