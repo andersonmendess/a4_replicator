@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:paperbuilder/main_page_bloc.dart';
 import 'package:pdf/pdf.dart';
@@ -11,18 +13,30 @@ class MainPage extends StatefulWidget {
 class _MainPageState extends State<MainPage> {
   final bloc = MainPageBloc();
 
+  void unFocus() {
+    var currentFocus = FocusScope.of(context);
+
+    if (!currentFocus.hasPrimaryFocus) {
+      currentFocus.unfocus();
+    }
+  }
+
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text("Replicador A4"),
+        elevation: 0,
         actions: [
-          IconButton(
-            icon: Icon(Icons.delete),
-            onPressed: () {
-              setState(() {
-                bloc.reset();
-              });
-            },
+          Visibility(
+            visible: bloc.imageFile != null,
+            child: IconButton(
+              icon: Icon(Icons.delete),
+              onPressed: () {
+                setState(() {
+                  bloc.reset();
+                });
+              },
+            ),
           )
         ],
       ),
@@ -33,110 +47,173 @@ class _MainPageState extends State<MainPage> {
               padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 10),
               child: Column(
                 children: [
-                  Center(
-                    child: ElevatedButton.icon(
-                      style: ButtonStyle(
-                        padding: MaterialStateProperty.all(
-                          EdgeInsets.all(16),
-                        ),
-                      ),
-                      icon: Icon(Icons.image),
-                      onPressed: () async {
-                        await bloc.pickImage();
-                        setState(() {});
-                      },
-                      label: Text("SELECIONAR IMAGEM"),
-                    ),
+                  _buildButton(
+                    label: "SELECIONAR IMAGEM",
+                    icon: Icons.image,
+                    action: () async {
+                      bloc.pickImage().then((_) => setState(() {}));
+                    },
                   ),
-                  SizedBox(height: 20),
-                  Text(
-                    "CONFIGURAÇÕES",
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  SwitchListTile(
-                    value: bloc.canSetHeight,
-                    onChanged: bloc.canSetWidth
-                        ? (value) {
-                            setState(() {
-                              bloc.canSetHeight = value;
-                            });
-                          }
-                        : null,
-                    title: Text("Proporção customizada"),
-                    subtitle:
-                        Text("Permite setar uma altura diferente da largura"),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Flex(
-                      direction: Axis.horizontal,
-                      children: [
-                        Flexible(
-                          child: TextField(
-                            keyboardType: TextInputType.number,
-                            enabled: bloc.canSetWidth,
-                            decoration: InputDecoration(
-                              labelText: "LARGURA (CM)",
-                              border: OutlineInputBorder(),
+                  bloc.imageFile?.path != null
+                      ? Padding(
+                          padding: const EdgeInsets.only(top: 10),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              border: Border.all(
+                                color: Colors.black.withOpacity(.1),
+                              ),
+                              borderRadius: BorderRadius.circular(8),
                             ),
-                            style: TextStyle(),
-                            onChanged: (String value) async {
-                              final cm = double.tryParse(value);
-
-                              if (cm != null && cm > 0) {
-                                bloc.widthCM = cm;
-                                setState(() {
-                                  bloc.canRender = true;
-                                });
-                              }
-                            },
-                          ),
-                        ),
-                        SizedBox(width: 10),
-                        Flexible(
-                          child: TextField(
-                            keyboardType: TextInputType.number,
-                            enabled: bloc.canSetHeight,
-                            decoration: InputDecoration(
-                              border: OutlineInputBorder(),
-                              labelText: "ALTURA (CM)",
+                            padding: const EdgeInsets.all(8)
+                                .copyWith(left: 16, right: 16),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              mainAxisAlignment: MainAxisAlignment.start,
+                              children: [
+                                Image.file(
+                                  File(bloc.imageFile.path),
+                                  width: 80,
+                                ),
+                                SizedBox(width: 20),
+                                Column(
+                                  children: [
+                                    Text(
+                                      bloc.imageFile.path.split("/").last,
+                                      style: TextStyle(
+                                          fontWeight: FontWeight.w600),
+                                    ),
+                                  ],
+                                )
+                              ],
                             ),
-                            style: TextStyle(),
-                            onChanged: (String value) async {
-                              final cm = double.tryParse(value);
-
-                              if (cm != null && cm > 0) {
-                                bloc.heightCM = cm;
-                              }
-                            },
                           ),
-                        ),
-                      ],
-                    ),
-                  ),
+                        )
+                      : Container(),
+                  SizedBox(height: 15),
+                  _buildSettingsContainer(),
                 ],
               ),
             ),
           ),
-          Center(
-            child: ElevatedButton.icon(
-              icon: Icon(Icons.picture_as_pdf),
-              style: ButtonStyle(
-                padding: MaterialStateProperty.all(
-                  EdgeInsets.all(16),
-                ),
+          _buildButton(
+            label: "GERAR",
+            icon: Icons.picture_as_pdf,
+            enabled: bloc.canRender,
+            action: () async {
+              unFocus();
+              bloc.renderPDF().then((_) => setState(() {}));
+            },
+          ),
+          _buildPdfPreview(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildButton({
+    String label,
+    Function action,
+    IconData icon,
+    bool enabled = true,
+  }) {
+    return Center(
+      child: ElevatedButton.icon(
+        style: ButtonStyle(
+          padding: MaterialStateProperty.all(
+            EdgeInsets.all(16).copyWith(top: 10, bottom: 10),
+          ),
+        ),
+        icon: Icon(icon),
+        onPressed: enabled ? action : null,
+        label: Text(label),
+      ),
+    );
+  }
+
+  Container _buildSettingsContainer() {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: Colors.black.withOpacity(.1),
+        ),
+      ),
+      child: Column(
+        children: [
+          SizedBox(height: 15),
+          Text(
+            "CONFIGURAÇÕES",
+            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+          ),
+          SwitchListTile(
+            value: bloc.canSetHeight,
+            onChanged: bloc.canSetWidth
+                ? (value) {
+                    setState(() {
+                      bloc.canSetHeight = value;
+                      bloc.heightTEC.clear();
+                    });
+                  }
+                : null,
+            title: Text("Proporção customizada"),
+            subtitle: Text("Permite setar uma altura diferente da largura"),
+          ),
+          _buildTextField(),
+        ],
+      ),
+    );
+  }
+
+  Padding _buildTextField() {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Flex(
+        direction: Axis.horizontal,
+        children: [
+          Flexible(
+            child: TextField(
+              keyboardType: TextInputType.number,
+              enabled: bloc.canSetWidth,
+              decoration: InputDecoration(
+                labelText: "LARGURA (CM)",
+                border: OutlineInputBorder(),
               ),
-              onPressed: bloc.canRender
-                  ? () async {
-                      await bloc.renderPDF();
-                      setState(() {});
-                    }
-                  : null,
-              label: Text("GERAR"),
+              style: TextStyle(),
+              controller: bloc.widthTEC,
+              onChanged: (String value) async {
+                final cm = double.tryParse(value);
+
+                if (cm != null && cm > 0) {
+                  setState(() {
+                    bloc.canRender = true;
+                  });
+                }
+              },
             ),
           ),
+          SizedBox(width: 10),
+          Flexible(
+            child: TextField(
+              keyboardType: TextInputType.number,
+              enabled: bloc.canSetHeight,
+              decoration: InputDecoration(
+                border: OutlineInputBorder(),
+                labelText: "ALTURA (CM)",
+              ),
+              style: TextStyle(),
+              controller: bloc.heightTEC,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Visibility _buildPdfPreview() {
+    return Visibility(
+      visible: bloc.pdfContent != null,
+      child: Column(
+        children: [
           SizedBox(height: 20),
           Padding(
             padding: const EdgeInsets.all(8.0),
@@ -156,7 +233,7 @@ class _MainPageState extends State<MainPage> {
           ),
           Container(
             width: 400,
-            height: 800,
+            height: 620,
             child: PdfPreview(
               build: (format) async => bloc.pdfContent,
               initialPageFormat: PdfPageFormat.a4,
@@ -164,7 +241,7 @@ class _MainPageState extends State<MainPage> {
               useActions: true,
               canChangePageFormat: false,
             ),
-          )
+          ),
         ],
       ),
     );

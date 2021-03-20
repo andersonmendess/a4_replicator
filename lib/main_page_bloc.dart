@@ -1,5 +1,8 @@
+import 'dart:async';
 import 'dart:typed_data';
 
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:paperbuilder/utils.dart';
 import 'package:pdf/pdf.dart';
@@ -15,17 +18,18 @@ class MainPageBloc {
   bool canSetWidth = false;
   bool canSetHeight = false;
   bool canRender = false;
+  bool isLoading = false;
 
-  double widthCM;
-  double heightCM;
+  var widthTEC = TextEditingController();
+  var heightTEC = TextEditingController();
 
   reset() {
     canSetWidth = false;
     canSetHeight = false;
     canRender = false;
 
-    widthCM = null;
-    heightCM = null;
+    widthTEC.clear();
+    heightTEC.clear();
 
     doc = pw.Document();
     pdfContent = null;
@@ -36,16 +40,18 @@ class MainPageBloc {
     try {
       final pickedFile = await picker.getImage(
         source: ImageSource.gallery,
-        maxWidth: 1000,
-        maxHeight: 1000,
-        imageQuality: 80,
       );
       imageFile = pickedFile;
       canSetWidth = true;
-    } catch (e) {}
+    } catch (e) {
+      print(e);
+    }
   }
 
   renderPDF() async {
+    var heightCM = double.tryParse(heightTEC.text);
+    var widthCM = double.tryParse(widthTEC.text);
+
     if (heightCM == null || heightCM == 0) heightCM = widthCM;
 
     final totalImages =
@@ -56,7 +62,7 @@ class MainPageBloc {
 
     doc.addPage(
       pw.Page(
-          margin: pw.EdgeInsets.all(8),
+          margin: pw.EdgeInsets.all(10),
           pageFormat: PdfPageFormat.a4,
           build: (pw.Context context) {
             return pw.GridView(
