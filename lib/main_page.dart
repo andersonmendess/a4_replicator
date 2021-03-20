@@ -3,6 +3,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:paperbuilder/main_page_bloc.dart';
 import 'package:pdf/pdf.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+
 import 'package:printing/printing.dart';
 
 class MainPage extends StatefulWidget {
@@ -70,10 +72,11 @@ class _MainPageState extends State<MainPage> {
                               crossAxisAlignment: CrossAxisAlignment.center,
                               mainAxisAlignment: MainAxisAlignment.start,
                               children: [
-                                Image.file(
-                                  File(bloc.imageFile.path),
-                                  width: 80,
-                                ),
+                                kIsWeb
+                                    ? Image.network(bloc.imageFile.path,
+                                        width: 80)
+                                    : Image.file(File(bloc.imageFile.path),
+                                        width: 80),
                                 SizedBox(width: 20),
                                 Column(
                                   children: [
@@ -120,7 +123,7 @@ class _MainPageState extends State<MainPage> {
       child: ElevatedButton.icon(
         style: ButtonStyle(
           padding: MaterialStateProperty.all(
-            EdgeInsets.all(16).copyWith(top: 10, bottom: 10),
+            EdgeInsets.all(16).copyWith(top: 14, bottom: 14),
           ),
         ),
         icon: Icon(icon),
